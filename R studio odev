@@ -1,0 +1,89 @@
+#Veri setini çağırdım.
+url <- "https://raw.githubusercontent.com/rashida048/Datasets/refs/heads/master/StudentsPerformance.csv"
+
+veri <- read.csv(url, sep = ",")
+head(veri) #Veri setinin özelliklerini inceledim.
+str(veri)
+summary(veri)
+
+#sayısal ve kategorik verileri düzenledim.
+data.frame(veri[, c("math.score", "reading.score", "writing.score")])
+
+summary(veri[, c("gender","race.ethnicity","parental.level.of.education","test.preparation.course")])
+
+# cinsiyet gibi kategorik değişkenleri 0 kadın 1 erkek olarak sayısal hale getirdim.
+# Önce orijinal karakter sütununu kullanarak dönüştürme yapalım.
+# Eğer 'female' (kadın) ise 0, 'male' (erkek) ise 1 atayalım.
+veri$gender <- ifelse(veri$gender == "female", 0, 1)
+head(veri$gender)
+
+
+veri$race.ethnicity <- as.numeric(as.factor(veri$race.ethnicity))
+head(veri$race.ethnicity)
+#Grup a,b,c olarak belirtilen etnik kökenleri grup a=1 b=2 c=3 olarak sayısal hale getirdim.
+str(veri$parental.level.of.education)
+head(veri$parental.level.of.education)
+
+
+edu_levels <- c("some college", "associate's degree", "bachelor's degree", "master's degree")
+veri$parental_edu_num <- as.numeric(factor(veri$parental.level.of.education,
+                                           levels = edu_levels))
+
+table(veri$parental_edu_num)
+
+head(veri$test.preparation.course)
+preparation <- c("none","completed")
+veri$test.preparation <- as.numeric(factor(veri$test.preparation.course, levels = preparation))
+table(veri$test.preparation)
+
+missing_data <- colSums(is.na(veri)) #kayıp verileri kontrol ettim.
+print(missing_data)
+veri <- na.omit(veri) #kayıp verileri işlemden çıkardım.
+
+#Verilerimde uç değer olup olmadığını inceledim.
+boxplot(veri$math.score,
+        main = "Matematik Notu Uç Değer Analizi",
+        ylab = "Puanlar",
+        col = "blue",
+        border = "pink")
+
+  boxplot(veri$writing.score,
+        main = "Yazma Notu Uç Değer Analizi",
+        ylab = "Puanlar",
+        col = "blue",
+        border = "pink")
+  boxplot(veri$reading.score,
+        main = "Okuma Notu Uç Değer Analizi",
+        ylab = "Puanlar",
+        col = "blue",
+        border = "pink")
+
+# 'psych' paketini yükle ve çağır
+if (!requireNamespace("psych", quietly = TRUE)) {
+  install.packages("psych", repos = "http://cran.us.r-project.org", dependencies = TRUE)
+}
+library(psych)
+istatistik_ozeti <- describe(veri[, c("math.score", "reading.score", "writing.score")])
+print(istatistik_ozeti[, c("mean", "sd", "skew", "kurtosis")]) #verilerimin çarpıklık ve basıklık puanına bakarak normal dağılım gösterip göstermediğini inceledim.
+
+selected_cols <- veri[, c("gender", "race.ethnicity", "parental_edu_num", "math.score","writing.score","reading.score")]
+cor_matrix <- cor(selected_cols) #Değişkenlerimin korelasyon düzeyini inceledim.
+print(cor_matrix)
+
+# 'car' paketini yükle ve çağır
+if (!requireNamespace("car", quietly = TRUE)) {
+  install.packages("car", repos = "http://cran.us.r-project.org")
+}
+library(car)
+
+model_vif <- lm(math.score ~ gender+ race.ethnicity + parental_edu_num +
+                 reading.score + writing.score, data = veri) #diğer değişkenlerin matematik puanını ne derece yordadığını incelemek için regresyon modeli oluşturdum.
+
+vif_sonuclari <- vif(model_vif) #modelin multicollinearity sorunu var mı kontrol ettim.
+print(vif_sonuclari)
+veri$sozel_basari <- (veri$reading.score + veri$writing.score) / 2 #writing ve reading 10'dan yüksek çıktığı için ortalamalarını analize dahil ettim.
+model_yeni <- lm(math.score ~ gender + race.ethnicity + parental_edu_num + sozel_basari, data = veri)
+vif(model_yeni) #yeni multicollinearity ve korelasyon değerlerini inceledim.
+son_durum <- veri[, c("gender", "race.ethnicity", "parental_edu_num", "math.score","sozel_basari")]
+cor_son <- cor(son_durum)
+print(cor_son)
