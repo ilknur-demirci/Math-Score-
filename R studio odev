@@ -87,3 +87,39 @@ vif(model_yeni) #yeni multicollinearity ve korelasyon değerlerini inceledim.
 son_durum <- veri[, c("gender", "race.ethnicity", "parental_edu_num", "math.score","sozel_basari")]
 cor_son <- cor(son_durum)
 print(cor_son)
+
+#Şimdi veri setimi üreterek ikinci bir analiz yapıyorum. 
+
+set.seed(42) #her uygulamada aynı sonucu alabilmek için set seed belirledim. 
+n <- 100 #örneklem büyüklüğünü seçtim. 
+#değişkenlerimi psikolojik dayanıklılık ve akademik başarı olarak seçtim. Onlar için standart sapma ve ortalama değerleri atadım. 
+dayaniklilik <- rnorm(n, mean = 65, sd = 15)
+akademik_basari <- (dayaniklilik * 0.6) + rnorm(n, mean = 40, sd = 10) 
+veri_uydurma <- data.frame(dayaniklilik, akademik_basari)
+#veri setime eksik veri ve uç değer ekleyeceğim. 
+veri_uydurma$akademik_basari[1:5] <- NA
+veri_uydurma$dayaniklilik[100] <- 99
+veri_uydurma$akademik_basari[100] <- 5
+#betimsel özelliklerini kontrol ediyorum. 
+summary(veri_uydurma)
+#eksik verileri kontrol edip siliyorum. 
+sum(is.na(veri_uydurma))
+veri_temiz <- na.omit(veri_uydurma)
+summary(veri_temiz)
+#korelasyon değerlerine bakıyorum. 
+cor(veri_temiz$dayaniklilik, veri_temiz$akademik_basari)
+#uç değerlere bakıyorum. 
+boxplot(veri_temiz$akademik_basari, 
+        main="Akademik Başarı Uç Değer Kontrolü", 
+        col="orange")
+boxplot(veri_temiz$dayaniklilik, 
+        main="Dayaniklilik Uç Değer Kontrolü", 
+        col="orange")
+    #uç değerleri temizliyorum.
+final_veri <- veri_temiz[veri_temiz$akademik_basari > 10 & veri_temiz$akademik_basari < 99, ]
+
+  nrow(final_veri)
+        # Multicollinearity kontrolü 
+    library(car)
+model_uydurma <- lm(akademik_basari ~ dayaniklilik, data = final_veri)
+cor(final_veri$dayaniklilik, final_veri$akademik_basari) 
